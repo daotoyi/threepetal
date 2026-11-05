@@ -155,3 +155,4 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/play   # 断言 2
 | 2026-11-05 | Next 升级至 15.5.x 安全补丁线 | 出海商用不带着已知告警上线 | package.json / lock |
 | 2026-11-05 | 正式定名 Threepetal（弃用撞名的 Tiny Haven）；移除虚构用户证言与未兑现功能宣称；花瓣色板收敛为 `--petal-1..5` Token；游戏渲染描述校正为 DOM Grid | 命名查重 + 上线合规 + P0-3 硬编码色值整改 | 全站文案、落地页、GameCanvas、globals.css、README、计划文档、第 1/2/4/7/8/9/10/11 节 |
 | 2026-11-05 | 工程目录 `tiny-haven/` → `threepetal/`；建立 git 版本管理并推送 `daotoyi/threepetal`；README 增补英文 How to play | 用户要求目录与仓库同名、玩法文案入文档 | 全项目路径引用、README、.gitignore |
+| 2026-11-05 | README 拆为中英双版本：`README.md`（英文，GitHub 默认渲染）+ `README.zh-CN.md`（中文），两份顶部互置左右语言切换栏 | 用户要求 GitHub 上可点击切换语言；GitHub 会过滤 JS/自定义 CSS，故采用原生双文件互链方案 | README.md、README.zh-CN.md、变更记录 |

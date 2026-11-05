@@ -1,12 +1,21 @@
-# Threepetal — 出海网页小游戏 MVP
+<div align="center">
+
+**English** &nbsp; | &nbsp; [简体中文](README.zh-CN.md)
+
+</div>
+
+# Threepetal
 
 > Threepetal is a quiet, ad-free puzzle garden: match three petals at a time, earn them back, and grow a little haven you own forever.
 
-正式名 **Threepetal**（slogan: *Three petals at a time.*）。原工作名 Tiny Haven 因与 `tinyhaven.gg` 同赛道撞名已弃用；工程目录与 npm 包名均为 `threepetal`。
+An ad-free, buy-once ($4.99) cozy match-three puzzle game with cloud saves, made for an English-speaking audience. Match petals, furnish a small garden, and keep it for good.
 
-无广告、买断制（$4.99）、可云端存档的欧美精品休闲解谜游戏（Cozy Puzzle + 装饰收集）。
-技术栈：Next.js 15 (App Router) + Supabase (Postgres/Auth/RLS) + LemonSqueezy (MoR 支付)。
-仓库：https://github.com/daotoyi/threepetal
+- **Tagline:** *Three petals at a time.*
+- **Stack:** Next.js 15 (App Router) + Supabase (Postgres / Auth / RLS) + LemonSqueezy (merchant of record, handles global sales tax)
+- **Repository:** https://github.com/daotoyi/threepetal
+- **Contract:** `Spec.md` is the single source of truth for behaviour and acceptance criteria.
+
+> The working name "Tiny Haven" was dropped after a naming conflict with `tinyhaven.gg`, a web-based cozy life sim in the same space. The directory and npm package are both named `threepetal`.
 
 ## How to play
 
@@ -17,28 +26,31 @@
 
 No timer. No ads. The first three chapters are free; one $4.99 purchase unlocks all six.
 
-> 关卡数据见 `lib/game/levels.ts`：6 关（免费 3 + 付费 3），首关 5×5 / 30 花瓣 / 12 步，第 6 关 8×8 / 130 花瓣 / 22 步。扩关卡时请同步更新本节与 `/unlock` 页的 "All 6 chapters" 表述。
+> Level data lives in `lib/game/levels.ts`: 6 chapters (3 free + 3 paid). Chapter one is 5x5 / 30 petals / 12 moves; chapter six is 8x8 / 130 petals / 22 moves. When adding chapters, update this section and the "All 6 chapters" copy on the `/unlock` page.
 
-## 目录结构
+## Project structure
+
 ```
 app/
-  page.tsx             落地页（真实游戏预览 Hero）
-  play/page.tsx        游戏页（关卡选择 + 画布 + 装饰面板 + 云端存档）
-  unlock/page.tsx      支付页（LemonSqueezy 结账）
-  account/page.tsx     账户页（邮箱 magic link 登录 + 恢复购买）
-  api/checkout         创建 LS 结账会话
-  api/webhook          LS Webhook（验签 + 幂等 + 写 licenses）
-  api/entitlements     服务端解锁校验（真相源）
-  api/progress         云端存档读写
+  page.tsx             Landing page (live game preview hero)
+  play/page.tsx        Game page (chapter select, board, decorations, cloud save)
+  unlock/page.tsx      Checkout page (LemonSqueezy)
+  account/page.tsx     Account page (email magic link, restore purchase)
+  api/checkout         Create a LemonSqueezy checkout session
+  api/webhook          LemonSqueezy webhook (signature, idempotency, licenses)
+  api/entitlements     Server-side entitlement check (source of truth)
+  api/progress         Cloud save read / write
 components/            ui / SiteHeader / SiteFooter / GameCanvas / DecorationPanel
-lib/supabase/          browser + server 客户端（@supabase/ssr）
-lib/lemonsqueezy.ts    checkout 创建 + webhook 签名校验
-lib/game/              types / engine（match-3） / levels
-supabase/migrations/   0001_init.sql（含 RLS 与唯一索引）
+lib/supabase/          browser + server clients (@supabase/ssr)
+lib/lemonsqueezy.ts    checkout creation + webhook signature verification
+lib/game/              types / engine (match-3) / levels
+supabase/migrations/   0001_init.sql (RLS policies and unique indexes)
 ```
 
-## 环境变量
-复制 `.env.example` 为 `.env.local` 并填写（详见下方账号开通步骤）：
+## Environment variables
+
+Copy `.env.example` to `.env.local` and fill in the values (see Account setup below):
+
 ```
 NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY
 LEMONSQUEEZY_API_KEY / LEMONSQUEEZY_STORE_ID / LEMONSQUEEZY_VARIANT_ID / LEMONSQUEEZY_WEBHOOK_SECRET
@@ -46,30 +58,44 @@ NEXT_PUBLIC_SITE_URL
 ENTITLEMENT_FULL_GAME=full_game
 ```
 
-## 本地运行
+No real credentials are committed to this repository.
+
+## Run locally
+
 ```bash
 npm install
 npm run dev            # http://localhost:3000
 ```
-> Vercel Hobby 禁止商用，上线必须 Vercel Pro；Supabase 免费层会暂停且无备份，生产用 Pro。
 
-## 开通账号（一次性）
-1. **Supabase**：新建项目 → SQL Editor 执行 `supabase/migrations/0001_init.sql` →
-   Project Settings 取 URL / anon / service_role key。
-2. **LemonSqueezy**：注册商家（KYC）→ 建 Product「Full Game Unlock」$4.99（一次性）→
-   取 Store ID、Variant ID → Settings → Webhooks 建端点指向 `https://<你的域名>/api/webhook`，
-   生成 Webhook Secret。沙箱测试用 LS Sandbox 环境同理。
+> Vercel Hobby cannot be used for commercial projects; production requires Vercel Pro. The Supabase free tier pauses projects and has no backups, so use Pro in production.
 
-## 支付全流程测试（沙箱）
-1. 启动 dev，登录账户页（magic link）。
-2. 进入 `/unlock` 点「Unlock」→ 前端 POST `/api/checkout` → 返回 LS 结账 URL → 跳转。
-3. 用 LS Sandbox / Simulator 完成测试支付 → LS 触发 `order_created` webhook。
-4. Webhook 验签通过 → 写 `purchases` / `licenses`(`full_game`, active) 成功后才落 `ls_events` 幂等标记；写入失败返回 5xx，让 LS 重发补齐。
-5. 前端 `/api/entitlements` 返回 `full_game` → 付费关卡解锁、装饰面板可用、云端存档生效。
-6. 换设备点「Restore」→ 凭 license 还原解锁状态。
+## Account setup (one-time)
 
-## 质量门禁（专家团 P0）
-- 全程 Lucide SVG 图标，零 emoji 图标；禁止紫→粉渐变；组件仅引用 Design Token（禁硬编码色值）。
-- 解锁真相源 = `licenses` 表，仅由 webhook 经 service_role 写入；前端 gate 仅为 UX。
-- Webhook 签名校验 + 事件幂等 + RLS 强制，防客户端伪造与重放。
-- 落地页与支付页只陈述已实现能力，禁止虚构用户证言与未兑现的功能宣称。
+1. **Supabase:** create a project -> run `supabase/migrations/0001_init.sql` in the SQL Editor -> copy the project URL, anon key and service_role key from Project Settings.
+2. **LemonSqueezy:** register as a merchant (KYC) -> create a one-time $4.99 product named "Full Game Unlock" -> copy the Store ID and Variant ID -> under Settings / Webhooks, add an endpoint pointing to `https://<your-domain>/api/webhook` and generate a Webhook Secret. Repeat in the Sandbox store for test payments.
+
+## Payment flow (sandbox test)
+
+1. Start the dev server and sign in on `/account` via email magic link.
+2. Open `/unlock` and choose "Unlock" -> the client POSTs `/api/checkout` -> receives a LemonSqueezy checkout URL -> redirects.
+3. Complete a test payment with the LemonSqueezy Sandbox / Simulator -> LemonSqueezy sends an `order_created` webhook.
+4. The webhook verifies the signature, writes `purchases` and `licenses` (`full_game`, active), and only **after** those succeed records the `ls_events` idempotency marker. A failed write returns 5xx so LemonSqueezy retries.
+5. `/api/entitlements` returns `full_game` -> paid chapters unlock, decorations become available, cloud saves activate.
+6. On another device, choose "Restore" to recover the entitlement from the license.
+
+Refunds (`order_refunded`) revoke access by looking up `purchases.ls_order_id`, since refund events do not carry `custom_data.user_id`.
+
+## Quality gates (P0)
+
+- Lucide SVG icons throughout, no emoji icons; no purple-to-pink gradients; components reference Design Tokens only (no hardcoded hex colours).
+- The `licenses` table is the source of truth for entitlements and is written only by the webhook via service_role; the client-side gate is UX only.
+- Webhook signature verification + event idempotency + enforced RLS protect against forged client requests and replays.
+- Landing and checkout pages state only shipped capabilities: no fabricated testimonials, no promises of unreleased features.
+
+## Status
+
+The code, game loop and payment chain are implemented and verified with a production build and runtime smoke test. Still outstanding:
+
+- Third-party credentials: Supabase project + migration, LemonSqueezy sandbox payment, Vercel Pro deployment.
+- Privacy policy, refund policy and a GDPR account-deletion flow are **not yet implemented**.
+- Trademark (USPTO / EUIPO), domain and app-store name checks before launch.
